@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Smart Student Performance Analytics & Prediction System
 
 A Flask portal that combines marks, attendance and assignment scores to analyse learning
@@ -87,3 +88,6 @@ spreadsheet-formula neutralisation in CSV/Excel exports, safe `next=` redirects.
 
 Email alerts to mentors, per-teacher subject assignment, student login to view their own report,
 PostgreSQL via SQLAlchemy, and a scheduled weekly prediction run.
+=======
+# Smart-Student-Performance-Analytics.
+>>>>>>> f0fa474fc20914db95ac2596c951f2a7f393b35a
