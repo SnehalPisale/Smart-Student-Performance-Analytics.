@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}At-risk alerts{% endblock %}
+{% block heading %}At-risk alerts{% endblock %}
+{% block subtitle %}<p>{{ rows|length }} student(s) may need academic intervention{% if info %} - based on the run at {{ info.trained_at }}{% endif %}</p>{% endblock %}
+{% block actions %}
+<a class="btn small" href="{{ url_for('export', kind='at_risk', fmt='pdf') }}">Download PDF</a>
+<a class="btn small" href="{{ url_for('export', kind='at_risk', fmt='xlsx') }}">Download Excel</a>
+{% endblock %}
+{% block content %}
+<section class="panel">
+{% if rows %}
+<ul class="alert-list">
+  {% for r in rows %}
+  <li>
+    <span class="badge {{ r.risk_level }}">{{ r.risk_level }}</span>
+    <div>
+      <a href="{{ url_for('student_detail', sid=r.student_id) }}"><b>{{ r.name }}</b></a>
+      <span class="hint" style="margin:0 0 0 6px">{{ r.usn }} - Sem {{ r.semester }} {{ r.section }} - predicted {{ r.predicted_score }}</span>
+      <p>{{ r.reasons|join('. ') ~ '.' if r.reasons else 'Flagged by the model.' }}
+         {{ 'Book a mentoring meeting this week.' if r.risk_level == 'High' else 'Keep an eye on progress and send an attendance reminder.' }}</p>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty">No students are flagged. {% if not info %}Run a prediction first to generate alerts.{% else %}Everyone scored as low risk in the latest run.{% endif %}</div>
+{% endif %}
+</section>
+{% endblock %}

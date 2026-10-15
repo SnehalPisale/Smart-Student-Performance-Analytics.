@@ -1,0 +1,1 @@
+{"features": ["internal1", "internal2", "assignment", "attendance_pct"], "labelled_rows": 70, "total_rows": 100, "r2": 0.838, "mae": 4.39, "method": "Random Forest (200 trees)", "importances": {"internal1": 0.421, "internal2": 0.424, "assignment": 0.132, "attendance_pct": 0.024}, "trained_at": "2026-10-15 17:02:28", "students": 20, "counts": {"Low": 8, "Medium": 9, "High": 3}}

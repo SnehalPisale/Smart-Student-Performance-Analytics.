@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block heading %}Users{% endblock %}
+{% block content %}
+<div class="panel tablewrap">
+<table>
+  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th></th></tr></thead>
+  <tbody>{% for u in users %}
+  <tr><td>{{ u.name }}</td><td>{{ u.email }}</td>
+    <td>{% if u.user_id == g.user.user_id %}{{ u.role }} (you)
+      {% else %}<form method="post" action="{{ url_for('user_role', uid=u.user_id) }}" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select name="role" aria-label="Role for {{ u.name }}" onchange="this.form.submit()">
+          <option value="teacher" {{ 'selected' if u.role=='teacher' }}>teacher</option>
+          <option value="admin" {{ 'selected' if u.role=='admin' }}>admin</option></select></form>{% endif %}</td>
+    <td>{{ u.created_at }}</td>
+    <td>{% if u.user_id != g.user.user_id %}
+      <form method="post" action="{{ url_for('user_delete', uid=u.user_id) }}" class="inline" onsubmit="return confirm('Delete this user?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn small danger">Delete</button></form>{% endif %}</td></tr>
+  {% endfor %}</tbody>
+</table>
+</div>
+{% endblock %}

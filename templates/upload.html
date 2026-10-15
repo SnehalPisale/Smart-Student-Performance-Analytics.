@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Upload files{% endblock %}
+{% block heading %}Upload files{% endblock %}
+{% block subtitle %}<p>Import many records at once from a .csv or .xlsx file (up to 2 MB).</p>{% endblock %}
+{% block content %}
+{% if result %}
+<section class="panel">
+  <h2>Import result</h2>
+  {% if result.filename %}<p><b>{{ result.saved }}</b> row(s) saved{% if result.skipped %}, <b>{{ result.skipped }}</b> skipped{% endif %}.</p>{% endif %}
+  {% if result.errors %}<ul class="problems">{% for e in result.errors[:50] %}<li>{{ e }}</li>{% endfor %}</ul>
+    {% if result.errors|length > 50 %}<p class="hint">Showing the first 50 problems.</p>{% endif %}{% endif %}
+</section>
+{% endif %}
+<div class="grid2">
+<form method="post" enctype="multipart/form-data" class="panel">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>Upload a file</h2>
+  <label class="field"><span>What are you uploading?</span>
+    <select name="kind">{% for key, k in kinds.items() %}<option value="{{ key }}" {{ 'selected' if selected==key }}>{{ k.label }}</option>{% endfor %}</select></label>
+  <label class="field"><span>File</span><input type="file" name="file" accept=".csv,.xlsx" required></label>
+  <button class="btn primary">Upload and import</button>
+</form>
+<section class="panel">
+  <h2>Required columns</h2>
+  {% for key, k in kinds.items() %}
+  <p style="margin:0 0 10px"><b>{{ k.label }}:</b> {{ k.required|join(', ') }}{% if k.optional %} (optional: {{ k.optional|join(', ') }}){% endif %}
+    <br><a href="{{ url_for('upload_sample', kind=key) }}">Download a sample {{ k.label|lower }} file</a></p>
+  {% endfor %}
+  <p class="hint">Rows with errors are skipped and listed above. Students must exist before their marks are uploaded. For marks, blank cells keep the existing value.</p>
+</section>
+</div>
+{% endblock %}

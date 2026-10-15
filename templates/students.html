@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Students{% endblock %}
+{% block heading %}Students{% endblock %}
+{% block subtitle %}<p>{{ students|length }} student(s) shown</p>{% endblock %}
+{% block actions %}<a class="btn primary small" href="{{ url_for('student_form') }}">Add student</a>{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search name or USN" aria-label="Search students">
+  <select name="semester" aria-label="Semester">
+    <option value="">All semesters</option>
+    {% for s in semesters %}<option value="{{ s }}" {{ 'selected' if sem==s }}>Semester {{ s }}</option>{% endfor %}
+  </select>
+  <select name="section" aria-label="Section">
+    <option value="">All sections</option>
+    {% for s in sections %}<option value="{{ s }}" {{ 'selected' if sec==s }}>Section {{ s }}</option>{% endfor %}
+  </select>
+  <button class="btn">Filter</button>
+  <a class="btn" href="{{ url_for('students') }}">Clear</a>
+</form>
+<div class="panel tablewrap">
+{% if students %}
+<table>
+  <thead><tr><th>USN</th><th>Name</th><th>Gender</th><th class="num">Semester</th><th>Section</th><th>Email</th><th></th></tr></thead>
+  <tbody>
+  {% for s in students %}
+  <tr>
+    <td>{{ s.usn }}</td>
+    <td><a href="{{ url_for('student_detail', sid=s.student_id) }}">{{ s.name }}</a></td>
+    <td>{{ s.gender }}</td><td class="num">{{ s.semester }}</td><td>{{ s.section }}</td><td>{{ s.email or '' }}</td>
+    <td class="row-actions">
+      <a class="btn small" href="{{ url_for('student_form', sid=s.student_id) }}">Edit</a>
+      {% if g.user.role == 'admin' %}
+      <form method="post" action="{{ url_for('student_delete', sid=s.student_id) }}" onsubmit="return confirm('Delete {{ s.name|e }} and all marks, attendance and predictions?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn small danger">Delete</button>
+      </form>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<div class="empty">No students match. Add one, or upload a file under Data entry.</div>{% endif %}
+</div>
+{% endblock %}

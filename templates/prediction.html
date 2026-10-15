@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Prediction{% endblock %}
+{% block heading %}Performance prediction{% endblock %}
+{% block subtitle %}<p>A Random Forest learns from past final marks and scores students who are still mid-term.</p>{% endblock %}
+{% block actions %}
+<form method="post" action="{{ url_for('prediction_run') }}" class="inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn primary small">Run prediction</button>
+</form>
+{% endblock %}
+{% block content %}
+{% if info %}
+<div class="grid2">
+  <section class="panel">
+    <h2>Latest model run</h2>
+    <dl class="facts">
+      <dt>Method</dt><dd>{{ info.method }}</dd>
+      <dt>Run at</dt><dd>{{ info.trained_at }}</dd>
+      <dt>Training rows</dt><dd>{{ info.labelled_rows }} of {{ info.total_rows }} have final marks</dd>
+      {% if info.r2 is not none %}<dt>Accuracy on unseen data</dt><dd>R&sup2; {{ info.r2 }}, average error {{ info.mae }} marks</dd>{% endif %}
+      <dt>Students scored</dt><dd>{{ info.students }}</dd>
+    </dl>
+    <p class="hint" style="margin-top:12px">Risk is High when the predicted score is under {{ config.HIGH_SCORE }} or attendance under {{ config.HIGH_ATTENDANCE }}%. It is Medium under {{ config.MEDIUM_SCORE }} or {{ config.MEDIUM_ATTENDANCE }}%. Change these in config.py.</p>
+  </section>
+  <section class="panel"><h2>What the model relies on</h2>
+    {% if info.importances %}<div id="c-imp" class="chart" style="height:220px"></div>
+    {% else %}<p class="hint">Feature importance appears once enough final marks exist to train the model.</p>{% endif %}
+  </section>
+</div>
+{% else %}
+<div class="empty" style="margin-bottom:20px">No prediction has been run yet. Select "Run prediction" to score every student.</div>
+{% endif %}
+
+<form class="filters" method="get">
+  <select name="risk" aria-label="Risk level" onchange="this.form.submit()">
+    <option value="">All risk levels</option>
+    {% for r in ['High','Medium','Low'] %}<option value="{{ r }}" {{ 'selected' if risk==r }}>{{ r }} risk</option>{% endfor %}
+  </select>
+</form>
+<div class="panel tablewrap">
+{% if rows %}
+<table>
+  <thead><tr><th>USN</th><th>Name</th><th>Class</th><th class="num">Predicted score</th><th>Risk</th><th class="num">Attendance</th><th class="num">Internal avg</th></tr></thead>
+  <tbody>{% for r in rows %}
+    <tr><td>{{ r.usn }}</td><td><a href="{{ url_for('student_detail', sid=r.student_id) }}">{{ r.name }}</a></td>
+    <td>Sem {{ r.semester }} {{ r.section }}</td><td class="num">{{ r.predicted_score }}</td>
+    <td><span class="badge {{ r.risk_level }}">{{ r.risk_level }}</span></td>
+    <td class="num">{{ (r.avg_attendance ~ '%') if r.avg_attendance is not none else '-' }}</td>
+    <td class="num">{{ r.avg_internal if r.avg_internal is not none else '-' }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}<div class="empty">No predictions to show.</div>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% if info and info.importances %}
+<script>
+whenReady(() => {
+  const imp = {{ info.importances|tojson }};
+  const names = {internal1: 'Internal 1', internal2: 'Internal 2', assignment: 'Assignment', attendance_pct: 'Attendance'};
+  const keys = Object.keys(imp).sort((a, b) => imp[a] - imp[b]);
+  draw('c-imp', [{x: keys.map(k => imp[k]), y: keys.map(k => names[k] || k), type: 'bar', orientation: 'h', marker: {color: COLORS.primary}}],
+    {xaxis: {title: 'Share of the decision'}, margin: {l: 90, t: 8}, showlegend: false});
+});
+</script>
+{% endif %}
+{% endblock %}

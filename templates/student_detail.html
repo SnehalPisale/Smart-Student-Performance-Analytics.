@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }}{% endblock %}
+{% block heading %}{{ student.name }}{% endblock %}
+{% block subtitle %}<p>{{ student.usn }} - Semester {{ student.semester }}, Section {{ student.section }}</p>{% endblock %}
+{% block actions %}<a class="btn small" href="{{ url_for('student_form', sid=student.student_id) }}">Edit</a>{% endblock %}
+{% block content %}
+<div class="grid2">
+  <section class="panel">
+    <h2>Latest prediction</h2>
+    {% if latest %}
+      <p style="margin:0 0 8px"><span class="badge {{ latest.risk_level }}">{{ latest.risk_level }} risk</span></p>
+      <dl class="facts"><dt>Predicted score</dt><dd>{{ latest.predicted_score }}</dd><dt>Run at</dt><dd>{{ latest.predicted_at }}</dd></dl>
+    {% else %}<p class="hint">This student has not been predicted yet. Run a prediction from the dashboard.</p>{% endif %}
+  </section>
+  <section class="panel"><h2>Predicted score over time</h2><div id="c-hist" class="chart" style="height:200px"></div></section>
+</div>
+<section class="panel tablewrap">
+  <h2>Subject results</h2>
+  {% if rows %}
+  <table>
+    <thead><tr><th>Subject</th><th class="num">Internal 1</th><th class="num">Internal 2</th><th class="num">Assignment</th><th class="num">Internal score</th><th class="num">Final</th><th class="num">Attendance</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr><td>{{ r.subject_code }} - {{ r.subject_name }}</td>
+      <td class="num">{{ r.internal1 if r.internal1 is not none else '-' }}</td><td class="num">{{ r.internal2 if r.internal2 is not none else '-' }}</td>
+      <td class="num">{{ r.assignment if r.assignment is not none else '-' }}</td><td class="num">{{ r.internal_score if r.internal_score is not none else '-' }}</td>
+      <td class="num">{{ r.final_mark if r.final_mark is not none else '-' }}</td>
+      <td class="num">{{ (r.attendance_pct ~ '%') if r.attendance_pct is not none else '-' }}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<div class="empty">No marks recorded for this student yet.</div>{% endif %}
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+whenReady(async () => {
+  const rows = await getJSON('{{ url_for("api_student_history", sid=student.student_id) }}');
+  const node = document.getElementById('c-hist');
+  if (!rows.length) { node.replaceWith(el('p', {class: 'hint'}, 'History appears after the first prediction run.')); return; }
+  draw('c-hist', [{x: rows.map(r => r.at), y: rows.map(r => r.score), mode: 'lines+markers', type: 'scatter',
+    line: {color: COLORS.primary}, marker: {color: rows.map(r => RISK_COLOR[r.risk]), size: 10}}],
+    {yaxis: {range: [0, 100], title: 'Predicted score'}, margin: {t: 8, b: 36}});
+});
+</script>
+{% endblock %}

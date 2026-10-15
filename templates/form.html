@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block content %}
+<form method="post" class="panel form-panel" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for f in fields %}
+  <label class="field">
+    <span>{{ f.label }}</span>
+    {% if f.options %}
+      <select name="{{ f.name }}">
+        {% for o in f.options %}<option value="{{ o }}" {{ 'selected' if values.get(f.name)|string == o|string }}>{{ o }}</option>{% endfor %}
+      </select>
+    {% else %}
+      <input name="{{ f.name }}" type="{{ f.type or 'text' }}" value="{{ values.get(f.name) or '' }}" {{ 'required' if f.required }}>
+    {% endif %}
+    {% if errors.get(f.name) %}<small class="err">{{ errors[f.name] }}</small>{% endif %}
+  </label>
+  {% endfor %}
+  <div class="actions"><button class="btn primary">Save</button><a class="btn" href="{{ cancel }}">Cancel</a></div>
+</form>
+{% endblock %}

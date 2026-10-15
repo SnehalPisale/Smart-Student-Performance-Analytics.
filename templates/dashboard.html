@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block subtitle %}<p id="lastrun">Loading latest figures...</p>{% endblock %}
+{% block actions %}
+<form method="post" action="{{ url_for('prediction_run') }}" class="inline">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="/">
+  <button class="btn primary small">Run prediction</button>
+</form>
+{% endblock %}
+{% block content %}
+<div class="figures" id="figures"></div>
+
+<section class="panel">
+  <h2>Class register</h2>
+  <p class="hint">One square per student, coloured by predicted risk. Select a square to open that student.</p>
+  <div class="roll" id="roll"></div>
+  <div class="key">
+    <span><i style="background:var(--high)"></i>High risk</span>
+    <span><i style="background:var(--med)"></i>Medium risk</span>
+    <span><i style="background:var(--low)"></i>Low risk</span>
+    <span><i style="background:var(--unrated)"></i>Not yet predicted</span>
+  </div>
+</section>
+
+<div class="grid2">
+  <section class="panel"><h2>Average score by subject</h2><div id="c-subjects" class="chart"></div></section>
+  <section class="panel"><h2>Attendance against internal score</h2><div id="c-scatter" class="chart"></div></section>
+  <section class="panel"><h2>Students by risk level</h2><div id="c-risk" class="chart"></div></section>
+  <section class="panel"><h2>Semester comparison</h2><div id="c-sem" class="chart"></div></section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+whenReady(async () => {
+  let d;
+  try { d = await getJSON('{{ url_for("api_dashboard") }}'); }
+  catch (e) { document.getElementById('lastrun').textContent = 'Could not load the dashboard data.'; return; }
+  const k = d.kpis;
+  document.getElementById('lastrun').textContent = k.last_run
+    ? 'Last prediction run: ' + k.last_run
+    : 'No prediction has been run yet. Select "Run prediction" to score every student.';
+
+  const figs = [
+    [k.students, 'Students'], [fmt(k.avg_internal), 'Average internal score'],
+    [fmt(k.avg_attendance, '%'), 'Average attendance'], [fmt(k.pass_rate, '%'), 'Pass rate (final marks)'],
+    [k.high, 'High-risk students', 'alert']
+  ];
+  const box = document.getElementById('figures');
+  figs.forEach(f => { const c = el('div', f[2] ? {class: f[2]} : {}); c.append(el('b', {}, String(f[0])), el('span', {}, f[1])); box.append(c); });
+
+  const roll = document.getElementById('roll');
+  d.roll.forEach(s => {
+    const a = el('a', {href: '/students/' + s.id, class: s.risk, title: s.name + ' (' + s.usn + '): ' + s.risk + ' risk'});
+    a.setAttribute('aria-label', s.name + ', ' + s.risk + ' risk');
+    roll.append(a);
+  });
+  if (!d.roll.length) roll.replaceWith(el('div', {class: 'empty'}, 'No students yet. Add students under Master data or upload a file.'));
+
+  draw('c-subjects', [
+    {x: d.subjects.map(s => s.code), y: d.subjects.map(s => s.internal), name: 'Internal', type: 'bar', marker: {color: COLORS.primary}, text: d.subjects.map(s => s.name), hovertemplate: '%{text}<br>Internal: %{y}<extra></extra>'},
+    {x: d.subjects.map(s => s.code), y: d.subjects.map(s => s.final), name: 'Final', type: 'bar', marker: {color: COLORS.grey}, text: d.subjects.map(s => s.name), hovertemplate: '%{text}<br>Final: %{y}<extra></extra>'}
+  ], {barmode: 'group', yaxis: {range: [0, 100], title: 'Score'}});
+
+  const groups = ['High', 'Medium', 'Low', 'Unrated'];
+  draw('c-scatter', groups.map(r => {
+    const pts = d.scatter.filter(p => p.risk === r);
+    return {x: pts.map(p => p.x), y: pts.map(p => p.y), text: pts.map(p => p.name), name: r, mode: 'markers', type: 'scatter',
+            marker: {color: RISK_COLOR[r], size: 9, line: {color: '#fff', width: 1}}, hovertemplate: '%{text}<br>Attendance %{x}%<br>Internal %{y}<extra></extra>'};
+  }).filter(t => t.x.length), {xaxis: {title: 'Average attendance (%)'}, yaxis: {title: 'Average internal score'}});
+
+  draw('c-risk', [{x: ['High', 'Medium', 'Low'], y: [d.risk_counts.High, d.risk_counts.Medium, d.risk_counts.Low], type: 'bar',
+    marker: {color: [COLORS.high, COLORS.med, COLORS.low]}, text: [d.risk_counts.High, d.risk_counts.Medium, d.risk_counts.Low], textposition: 'outside'}],
+    {yaxis: {title: 'Students'}, showlegend: false});
+
+  draw('c-sem', [
+    {x: d.semester.map(s => 'Semester ' + s.semester), y: d.semester.map(s => s.internal), name: 'Internal score', type: 'bar', marker: {color: COLORS.primary}},
+    {x: d.semester.map(s => 'Semester ' + s.semester), y: d.semester.map(s => s.attendance), name: 'Attendance %', type: 'bar', marker: {color: COLORS.low}}
+  ], {barmode: 'group', yaxis: {range: [0, 100]}});
+});
+</script>
+{% endblock %}

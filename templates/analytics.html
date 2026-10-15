@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block heading %}Analytics{% endblock %}
+{% block subtitle %}<p>Descriptive statistics and patterns across marks and attendance.</p>{% endblock %}
+{% block content %}
+<form class="filters" id="filters">
+  <select id="f-sem" aria-label="Semester"><option value="">All semesters</option>
+    {% for s in semesters %}<option value="{{ s }}">Semester {{ s }}</option>{% endfor %}</select>
+  <select id="f-sec" aria-label="Section"><option value="">All sections</option>
+    {% for s in sections %}<option value="{{ s }}">Section {{ s }}</option>{% endfor %}</select>
+</form>
+<div id="empty" class="empty" hidden>No marks match this filter yet.</div>
+<div id="body">
+  <section class="panel tablewrap"><h2>Descriptive statistics</h2>
+    <table id="t-describe"><thead><tr><th>Measure</th><th class="num">Records</th><th class="num">Mean</th><th class="num">Std dev</th><th class="num">Min</th><th class="num">Median</th><th class="num">Max</th></tr></thead><tbody></tbody></table></section>
+  <div class="grid2">
+    <section class="panel"><h2>Score distribution</h2><div id="c-hist" class="chart"></div></section>
+    <section class="panel"><h2>Attendance band against internal score</h2><div id="c-bands" class="chart"></div></section>
+    <section class="panel"><h2>What moves together</h2><p class="hint">Correlation between each pair of measures. Closer to 1 means they rise together.</p><div id="c-corr" class="chart"></div></section>
+    <section class="panel"><h2>Pass rate by subject</h2><div id="c-pass" class="chart"></div></section>
+    <section class="panel"><h2>Sections compared</h2><div id="c-sec" class="chart"></div></section>
+    <section class="panel"><h2>Gender comparison</h2><div id="c-gender" class="chart"></div></section>
+  </div>
+  <div class="grid2">
+    <section class="panel tablewrap"><h2>Strongest five</h2><table id="t-top"><thead><tr><th>Student</th><th class="num">Internal</th><th class="num">Attendance</th></tr></thead><tbody></tbody></table></section>
+    <section class="panel tablewrap"><h2>Needing the most support</h2><table id="t-bottom"><thead><tr><th>Student</th><th class="num">Internal</th><th class="num">Attendance</th></tr></thead><tbody></tbody></table></section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function fill(id, rows, cols) {
+  const tb = document.querySelector('#' + id + ' tbody'); tb.replaceChildren();
+  rows.forEach(r => { const tr = el('tr'); cols.forEach((c, i) => tr.append(el('td', i ? {class: 'num'} : {}, fmt(r[c])))); tb.append(tr); });
+}
+async function load() {
+  const p = new URLSearchParams();
+  const sem = document.getElementById('f-sem').value, sec = document.getElementById('f-sec').value;
+  if (sem) p.set('semester', sem); if (sec) p.set('section', sec);
+  const d = await getJSON('{{ url_for("api_analytics") }}?' + p);
+  document.getElementById('empty').hidden = !d.empty;
+  document.getElementById('body').hidden = d.empty;
+  if (d.empty) return;
+
+  fill('t-describe', d.describe, ['metric', 'count', 'mean', 'std', 'min', 'median', 'max']);
+  fill('t-top', d.top, ['name', 'avg_internal', 'avg_attendance']);
+  fill('t-bottom', d.bottom, ['name', 'avg_internal', 'avg_attendance']);
+
+  draw('c-hist', [
+    {x: d.hist.labels, y: d.hist.internal, name: 'Internal score', type: 'bar', marker: {color: COLORS.primary}},
+    {x: d.hist.labels, y: d.hist.final, name: 'Final mark', type: 'bar', marker: {color: COLORS.grey}}
+  ], {barmode: 'group', xaxis: {title: 'Score range'}, yaxis: {title: 'Records'}});
+
+  draw('c-bands', [{x: d.bands.map(b => b.band), y: d.bands.map(b => b.avg_internal), type: 'bar', marker: {color: COLORS.primary},
+    text: d.bands.map(b => b.students + ' students'), hovertemplate: '%{x}<br>Internal %{y}<br>%{text}<extra></extra>'}],
+    {yaxis: {range: [0, 100], title: 'Average internal score'}, showlegend: false});
+
+  draw('c-corr', [{z: d.corr.matrix, x: d.corr.labels, y: d.corr.labels, type: 'heatmap', zmin: -1, zmax: 1,
+    colorscale: [[0, '#c8423b'], [0.5, '#f4f5f8'], [1, '#26408b']], text: d.corr.matrix.map(r => r.map(v => v === null ? '' : v)),
+    texttemplate: '%{text}', hovertemplate: '%{y} and %{x}: %{z}<extra></extra>'}],
+    {margin: {l: 90, b: 70}, yaxis: {autorange: 'reversed'}});
+
+  draw('c-pass', [{x: d.subjects.map(s => s.code), y: d.subjects.map(s => s.pass_rate), type: 'bar', marker: {color: COLORS.low},
+    text: d.subjects.map(s => s.name), hovertemplate: '%{text}<br>Pass rate %{y}%<extra></extra>'}],
+    {yaxis: {range: [0, 100], title: 'Pass rate (%)'}, showlegend: false});
+
+  draw('c-sec', [
+    {x: d.sections.map(s => s.section), y: d.sections.map(s => s.internal), name: 'Internal score', type: 'bar', marker: {color: COLORS.primary}},
+    {x: d.sections.map(s => s.section), y: d.sections.map(s => s.attendance), name: 'Attendance %', type: 'bar', marker: {color: COLORS.low}}
+  ], {barmode: 'group', yaxis: {range: [0, 100]}});
+
+  draw('c-gender', [{x: d.gender.map(g => g.gender), y: d.gender.map(g => g.internal), type: 'bar', marker: {color: COLORS.primary},
+    text: d.gender.map(g => g.students + ' students'), hovertemplate: '%{x}<br>Internal %{y}<br>%{text}<extra></extra>'}],
+    {yaxis: {range: [0, 100], title: 'Average internal score'}, showlegend: false});
+}
+whenReady(() => { load(); document.querySelectorAll('#filters select').forEach(s => s.addEventListener('change', load)); });
+</script>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block heading %}Reports and export{% endblock %}
+{% block subtitle %}<p>Download any dataset as CSV, Excel or PDF.</p>{% endblock %}
+{% block content %}
+<section class="panel">
+  {% for key, d in datasets.items() %}
+  <div class="report-row">
+    <div><b>{{ d[0] }}</b><div class="hint" style="margin:0">{{ d[1]|map('replace','_',' ')|join(', ') }}</div></div>
+    <div class="row-actions">
+      <a class="btn small" href="{{ url_for('export', kind=key, fmt='csv') }}">CSV</a>
+      <a class="btn small" href="{{ url_for('export', kind=key, fmt='xlsx') }}">Excel</a>
+      <a class="btn small" href="{{ url_for('export', kind=key, fmt='pdf') }}">PDF</a>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

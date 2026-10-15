@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% block auth %}
+<div class="auth"><div class="box">
+  <h1>Create account</h1>
+  <p class="sub">New accounts get the faculty role. An administrator can change it later.</p>
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field"><span>Full name</span><input name="name" value="{{ values.get('name','') }}" required>
+      {% if errors.name %}<small class="err">{{ errors.name }}</small>{% endif %}</label>
+    <label class="field"><span>Email</span><input name="email" type="email" value="{{ values.get('email','') }}" required>
+      {% if errors.email %}<small class="err">{{ errors.email }}</small>{% endif %}</label>
+    <label class="field"><span>Password (8+ characters)</span><input name="password" type="password" autocomplete="new-password" required>
+      {% if errors.password %}<small class="err">{{ errors.password }}</small>{% endif %}</label>
+    <label class="field"><span>Confirm password</span><input name="confirm" type="password" autocomplete="new-password" required>
+      {% if errors.confirm %}<small class="err">{{ errors.confirm }}</small>{% endif %}</label>
+    <button class="btn primary" style="width:100%">Create account</button>
+  </form>
+  <p class="alt">Already registered? <a href="{{ url_for('login') }}">Sign in</a></p>
+</div></div>
+{% endblock %}

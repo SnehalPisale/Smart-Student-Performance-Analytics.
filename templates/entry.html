@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Marks and attendance{% endblock %}
+{% block heading %}Marks and attendance{% endblock %}
+{% block subtitle %}<p>Pick a subject, then fill in the class sheet. All marks are out of 100.</p>{% endblock %}
+{% block content %}
+<form method="get" class="filters">
+  <select name="subject_id" aria-label="Subject" onchange="this.form.submit()">
+    <option value="">Choose a subject...</option>
+    {% for s in subjects %}<option value="{{ s.subject_id }}" {{ 'selected' if subject and subject.subject_id==s.subject_id }}>Sem {{ s.semester }} - {{ s.subject_code }} {{ s.subject_name }}</option>{% endfor %}
+  </select>
+  <noscript><button class="btn">Open</button></noscript>
+</form>
+
+{% if problems %}<ul class="problems">{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul>{% endif %}
+
+{% if not subject %}
+  <div class="empty">{% if subjects %}Choose a subject to enter marks for every student in its semester.{% else %}Add a subject first under Master data.{% endif %}</div>
+{% elif not rows %}
+  <div class="empty">No students are enrolled in semester {{ subject.semester }}. Add students first.</div>
+{% else %}
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="subject_id" value="{{ subject.subject_id }}">
+  <div class="panel tablewrap">
+    <table class="grid-entry">
+      <thead><tr><th>Student</th><th class="num">Internal 1</th><th class="num">Internal 2</th><th class="num">Assignment</th><th class="num">Final</th><th class="num">Classes held</th><th class="num">Attended</th></tr></thead>
+      <tbody>{% for r in rows %}
+      <tr><td>{{ r.name }}<br><small style="color:var(--muted)">{{ r.usn }}</small></td>
+        {% for f in ['internal1','internal2','assignment','final_mark','classes_held','classes_attended'] %}
+        <td class="num"><input name="{{ f }}_{{ r.student_id }}" inputmode="decimal" value="{{ r[f] if r[f] is not none else '' }}" aria-label="{{ f|replace('_',' ') }} for {{ r.name }}"></td>
+        {% endfor %}</tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <div class="savebar"><button class="btn primary">Save class sheet</button><span class="hint" style="margin:0">Blank cells stay empty. Final marks can be left blank until results are out.</span></div>
+</form>
+{% endif %}
+{% endblock %}

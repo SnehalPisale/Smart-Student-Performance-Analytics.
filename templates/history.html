@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block heading %}Prediction history{% endblock %}
+{% block subtitle %}<p>Every run is kept for audit, so you can see whether interventions are working.</p>{% endblock %}
+{% block actions %}<a class="btn small" href="{{ url_for('export', kind='history', fmt='csv') }}">Download CSV</a>{% endblock %}
+{% block content %}
+<div class="grid2">
+  <section class="panel"><h2>Risk across runs</h2>
+    {% if runs %}<div id="c-runs" class="chart" style="height:260px"></div>{% else %}<div class="empty">No runs yet.</div>{% endif %}</section>
+  <section class="panel tablewrap"><h2>Runs</h2>
+    {% if runs %}<table><thead><tr><th>Run at</th><th class="num">Students</th><th class="num">Avg score</th><th class="num">High</th><th class="num">Medium</th><th class="num">Low</th></tr></thead>
+    <tbody>{% for r in runs|reverse %}<tr><td>{{ r.predicted_at }}</td><td class="num">{{ r.students }}</td><td class="num">{{ r.avg_score }}</td><td class="num">{{ r.high }}</td><td class="num">{{ r.medium }}</td><td class="num">{{ r.low }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="hint">Run a prediction from the dashboard to start the history.</p>{% endif %}</section>
+</div>
+<form class="filters" method="get">
+  <select name="student_id" aria-label="Student" onchange="this.form.submit()">
+    <option value="">All students (latest 200 records)</option>
+    {% for s in students %}<option value="{{ s.student_id }}" {{ 'selected' if sid==s.student_id }}>{{ s.name }} ({{ s.usn }})</option>{% endfor %}
+  </select>
+</form>
+<div class="panel tablewrap">
+{% if records %}
+<table><thead><tr><th>Run at</th><th>USN</th><th>Name</th><th class="num">Predicted score</th><th>Risk</th></tr></thead>
+<tbody>{% for r in records %}<tr><td>{{ r.predicted_at }}</td><td>{{ r.usn }}</td><td>{{ r.name }}</td><td class="num">{{ r.predicted_score }}</td><td><span class="badge {{ r.risk_level }}">{{ r.risk_level }}</span></td></tr>{% endfor %}</tbody></table>
+{% else %}<div class="empty">No records to show.</div>{% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% if runs %}
+<script>
+whenReady(async () => {
+  const d = await getJSON('{{ url_for("api_history_runs") }}');
+  const x = d.map(r => r.predicted_at);
+  draw('c-runs', [
+    {x, y: d.map(r => r.high), name: 'High', type: 'scatter', mode: 'lines+markers', line: {color: COLORS.high}},
+    {x, y: d.map(r => r.medium), name: 'Medium', type: 'scatter', mode: 'lines+markers', line: {color: COLORS.med}},
+    {x, y: d.map(r => r.low), name: 'Low', type: 'scatter', mode: 'lines+markers', line: {color: COLORS.low}}
+  ], {yaxis: {title: 'Students'}});
+});
+</script>
+{% endif %}
+{% endblock %}
